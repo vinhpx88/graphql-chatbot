@@ -22,8 +22,15 @@ return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
 const resolvers = {
   Query: {
     hello: () => 'Hello world!',
-    users: async () => await User.find().populate('questions'),
-    user: async (_, { id }) => await User.findById(id).populate('questions'),
+    users: async (_, __, { user, error }) => {
+      if (error) throw new Error(error);
+      if (!user) throw new Error('Not authenticated');
+      return await User.find().populate('questions')
+    },
+    user: async (_, { id }, { user, error }) => { 
+      if (error) throw new Error(error);
+      if (!user) throw new Error('Not authenticated');
+      return await User.findById(id).populate('questions')},
   },
   Mutation: {
     createUser: async (_, { email, password }) => {
@@ -36,9 +43,7 @@ const resolvers = {
     postQuestion: async (_, { userId, question }, { user, error }) => {
       if (error) throw new Error(error);
       if (!user) throw new Error('Not authenticated');
-      if (!user) {
-        throw new Error('Not authenticated');
-      }
+      
       const answer = generateAnswer(question);
       const newQuestion = new Question({ question, answer, author: user.id });
       await newQuestion.save();

@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    await mongoose.connect('mongodb://localhost:27017/mygraphqlserver', {
+    await mongoose.connect('mongodb://192.168.0.110:27017/mygraphqlserver', {
       authSource: "admin",
       useNewUrlParser: true,
       useUnifiedTopology: true,
