@@ -1,16 +1,20 @@
 import User from '../models/User.js';
 import Question from '../models/Question.js';
+import Group from '../models/Group.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { askSth } from '../ai-service/lm.js';
 
-const generateAnswer = (question) => {
-  if (question.toLowerCase().includes('hello')) {
-    return 'Hello! How can I help you?';
-  } else if (question.toLowerCase().includes('bye')) {
-    return 'Goodbye! Have a nice day!';
-  } else {
-    return 'This is a default answer to your question.';
-  }
+const generateAnswer = async (question)  => {
+
+  return await askSth(question);
+  // if (question.toLowerCase().includes('hello')) {
+  //   return 'Hello! How can I help you?';
+  // } else if (question.toLowerCase().includes('bye')) {
+  //   return 'Goodbye! Have a nice day!';
+  // } else {
+  //   return 'This is a default answer to your question.';
+  // }
 };
 
 const generateToken = (user) => {
@@ -25,12 +29,40 @@ const resolvers = {
     users: async (_, __, { user, error }) => {
       if (error) throw new Error(error);
       if (!user) throw new Error('Not authenticated');
-      return await User.find().populate('questions')
+      return await User.find().populate('groups')
     },
     user: async (_, { id }, { user, error }) => { 
       if (error) throw new Error(error);
       if (!user) throw new Error('Not authenticated');
-      return await User.findById(id).populate('questions')},
+      return await User.findById(id).populate('groups')
+    },
+
+    questions: async (_, __, { user, error }) => {
+      if (error) throw new Error(error);
+      if (!user) throw new Error('Not authenticated');
+      return await Question.find().populate('group').populate('user')
+    },
+    question: async (_, { id }, {user, error}) => { 
+      if (error) throw new Error(error);
+      if (!user) throw new Error('Not authenticated');
+      return await Question.findById(id).populate('group').populate('user')
+    },
+    groups: async (_, __, { user, error }) => {
+      if (error) throw new Error(error);
+      if (!user) throw new Error('Not authenticated');
+      return await Group.find().populate('questions').populate('user')
+    },
+    group: async (_, { id }, {user, error}) => {
+      if (error) throw new Error(error);
+      if (!user) throw new Error('Not authenticated');
+      return await Group.findById(id).populate('questions').populate('user') 
+    },
+    groupsByUser: async (_, { userId }, {user, error}) => {
+      if (error) throw new Error(error);
+      if (!user) throw new Error('Not authenticated');
+      const groups = await Group.find({ user: userId }).populate('questions').populate('user');
+      return groups;
+    }
   },
   Mutation: {
     createUser: async (_, { email, password }) => {
@@ -40,16 +72,37 @@ const resolvers = {
       const token = generateToken(newUser);
       return { id: newUser.id, email: newUser.email, token };
     },
-    postQuestion: async (_, { userId, question }, { user, error }) => {
+    postQuestion: async (_, { question, groupId }, {user, error}) => {
       if (error) throw new Error(error);
       if (!user) throw new Error('Not authenticated');
-      
-      const answer = generateAnswer(question);
-      const newQuestion = new Question({ question, answer, author: user.id });
+
+      const group = await Group.findById(groupId);
+      if (!group) {
+        throw new Error('Group not found');
+      }
+
+      const answer = await generateAnswer(question);
+
+      const newQuestion = new Question({ question, answer, group });
       await newQuestion.save();
-      user.questions.push(newQuestion);
-      await user.save();
-      return newQuestion.populate('author');
+      group.questions.push(newQuestion);
+      await group.save();
+      return newQuestion;
+    },
+    createGroup: async (_, { name, userId }, {user, error}) => {
+      if (error) throw new Error(error);
+      if (!user) throw new Error('Not authenticated');
+
+      const userdb = await User.findById(user);
+      if (!userdb) {
+        throw new Error('User not found');
+      }
+
+      const group = new Group({ name, user });
+      await group.save();
+      userdb.groups.push(group);
+      await userdb.save();
+      return group;
     },
     login: async (_, { email, password }) => {
       const user = await User.findOne({ email });

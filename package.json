@@ -9,6 +9,7 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@lmstudio/sdk": "^0.0.12",
     "apollo-server": "^3.0.0",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",

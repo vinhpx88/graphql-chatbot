@@ -5,14 +5,21 @@ const typeDefs = gql`
     id: ID!
     email: String!
     password: String!
-    questions: [Question]
+    groups: [Group!]
+  }
+
+  type Group {
+    id: ID!
+    name: String!
+    questions: [Question!]
+    user: User!
   }
 
   type Question {
     id: ID!
     question: String!
     answer: String!
-    author: User
+    group: Group!
   }
 
   type QuestionResponse {
@@ -36,12 +43,18 @@ const typeDefs = gql`
     hello: String
     users: [User]
     user(id: ID!): User
+    questions: [Question!]!
+    question(id: ID!): Question
+    groups: [Group!]!
+    group(id: ID!): Group
+    groupsByUser(userId: ID!): [Group!]!
   }
 
   type Mutation {
     createUser(email: String!, password: String!): CreateUserResponse
-    postQuestion(userId: ID!, question: String!): Question
     login(email: String!, password: String!): LoginResponse
+    postQuestion(question: String!, groupId: ID!): Question
+    createGroup(name: String!, userId: ID!): Group
   }
 `;
 
